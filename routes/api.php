@@ -15,7 +15,7 @@ Route::post('/logout', function (Request $request) {
 
 
 Route::get('/test', function () {
-    return response()->json(['message' => 'API is working!']);
+    return response()->json(['message' => 'API is working!!!']);
 });
 
 Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
