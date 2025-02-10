@@ -1,11 +1,11 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../services/api_service.dart';  // Import the ApiService
+import '../services/api_service.dart';  // Import ApiService
 
 class EventsScreen extends StatefulWidget {
   final ApiService apiService;
-  EventsScreen({required this.apiService});  // Accept ApiService
+  final String token;
+
+  EventsScreen({required this.apiService, required this.token});  // Constructor
 
   @override
   _EventsScreenState createState() => _EventsScreenState();
@@ -13,18 +13,6 @@ class EventsScreen extends StatefulWidget {
 
 class _EventsScreenState extends State<EventsScreen> {
   List events = [];
-  String token = "1r1y8Aogv6fg9ols86DwTtVF4wBkDFHe0ExG1vrddcc0e80e"; // Replace with actual token from login
-
-  Future<void> fetchEvents() async {
-    try {
-      List<dynamic> data = await widget.apiService.fetchEvents(token);
-      setState(() {
-        events = data;
-      });
-    } catch (e) {
-      print('Failed to load events: $e');
-    }
-  }
 
   @override
   void initState() {
@@ -32,19 +20,34 @@ class _EventsScreenState extends State<EventsScreen> {
     fetchEvents();
   }
 
+  Future<void> fetchEvents() async {
+  try {
+    List<dynamic> fetchedEvents = await widget.apiService.fetchEvents(); 
+
+    setState(() {
+      events = fetchedEvents;
+    });
+  } catch (e) {
+    print('Error fetching events: $e');
+  }
+}
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Events')),
-      body: ListView.builder(
-        itemCount: events.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(events[index]['title']),
-            subtitle: Text(events[index]['location']),
-          );
-        },
-      ),
+      appBar: AppBar(title: Text("Events")),
+      body: events.isEmpty
+          ? Center(child: CircularProgressIndicator()) // Show a loading spinner
+          : ListView.builder(
+              itemCount: events.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(events[index]['title']),
+                  subtitle: Text(events[index]['description']),
+                );
+              },
+            ),
     );
   }
 }
