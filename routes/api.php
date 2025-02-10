@@ -11,11 +11,12 @@ Route::middleware('auth:sanctum')->get('/events', [EventController::class, 'inde
 
 
 
-
-
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->get('/events', [EventController::class, 'index']);
+
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+
 
 Route::get('/test', function () {
     return response()->json(['message' => 'API is working!!!']);
