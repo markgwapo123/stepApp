@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
-import 'screens/events_screen.dart';
-import 'screens/authscreen.dart';
+import 'screens/events_screen.dart';   // ✅ Import the file
+import 'screens/create_event_screen.dart';  // ✅ Import the file
+import 'screens/authscreen.dart';  // ✅ Ensure this file exists
 import 'services/api_service.dart';
+import 'package:msunityapp/screens/create_event_screen.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,13 +28,13 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Event App',
-      initialRoute: (token == null || token?.isEmpty == true) ? '/auth' : '/events',
-
+      initialRoute: (token?.isEmpty ?? true) ? '/auth' : '/events',
       routes: {
-        "/auth": (context) => AuthScreen(), // ✅ Ensure AuthScreen is implemented
+        "/auth": (context) => AuthScreen(),  
         "/login": (context) => LoginScreen(),
         "/register": (context) => RegisterScreen(),
-        "/events": (context) => EventsScreen(apiService: apiService, token: token ?? ""),
+        "/events": (context) => EventsScreen(apiService: apiService, token: token ?? ""), // ✅ Correct
+        "/create_event": (context) => CreateEventScreen(apiService: apiService, token: token ?? ""), // ✅ Correct
       },
     );
   }
