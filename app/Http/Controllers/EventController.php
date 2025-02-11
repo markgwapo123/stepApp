@@ -16,22 +16,35 @@ class EventController extends Controller
             'description' => 'nullable|string',
             'location' => 'nullable|string',
             'date' => 'required|date',
-            'time' => 'required|string',
+            'time' => 'required|date_format:H:i',
         ]);
     
+        // Ensure user authentication is working before setting user_id
+        $userId = auth()->id(); 
+        if (!$userId) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+    
+        // Create the event with proper handling of nullable fields
         $event = Event::create([
             'title' => $validatedData['title'],
-            'description' => $validatedData['description'],
-            'location' => $validatedData['location'],
+            'description' => $validatedData['description'] ?? null, // Handle nullable field
+            'location' => $validatedData['location'] ?? null, // Handle nullable field
             'date' => $validatedData['date'],
             'time' => $validatedData['time'],
-            'user_id' => auth()->id(), // Set the user_id automatically
+            'user_id' => $userId, // Assign authenticated user ID
         ]);
     
-        return response()->json([
-            'message' => 'Event created successfully!',
-            'event' => $event
-        ], 201);
+        if ($event) {
+            return response()->json([
+                'message' => '✅ Event created successfully!',
+                'event' => $event
+            ], 201);
+        } else {
+            return response()->json([
+                'message' => '❌ Failed to create event.'
+            ], 500);
+        }
     }
     
 
