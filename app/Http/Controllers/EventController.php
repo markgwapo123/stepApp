@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 
 class EventController extends Controller
 {
-    // Create an event
+    // ✅ CREATE EVENT
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -18,89 +18,87 @@ class EventController extends Controller
             'date' => 'required|date',
             'time' => 'required|date_format:H:i',
         ]);
-    
-        // Ensure user authentication is working before setting user_id
-        $userId = auth()->id(); 
+
+        $userId = Auth::id(); 
         if (!$userId) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-    
-        // Create the event with proper handling of nullable fields
+
         $event = Event::create([
             'title' => $validatedData['title'],
-            'description' => $validatedData['description'] ?? null, // Handle nullable field
-            'location' => $validatedData['location'] ?? null, // Handle nullable field
+            'description' => $validatedData['description'] ?? null,
+            'location' => $validatedData['location'] ?? null,
             'date' => $validatedData['date'],
             'time' => $validatedData['time'],
-            'user_id' => $userId, // Assign authenticated user ID
+            'user_id' => $userId,
         ]);
-    
-        if ($event) {
-            return response()->json([
-                'message' => '✅ Event created successfully!',
-                'event' => $event
-            ], 201);
-        } else {
-            return response()->json([
-                'message' => '❌ Failed to create event.'
-            ], 500);
-        }
-    }
-    
 
-    // Fetch all events (visible to all users)
+        return response()->json([
+            'message' => '✅ Event created successfully!',
+            'event' => $event
+        ], 201);
+    }
+
+    // ✅ FETCH ALL EVENTS (With User Details)
     public function index()
     {
-        return response()->json(Event::all(), 200);
-    }
-    
-    // Fetch a single event
-    public function show($id)
-    {
-        return response()->json(Event::with('user')->findOrFail($id));
+        $events = Event::with('user:id,name,profile_picture')->get(); // Fetch events with user info
+        return response()->json($events, 200);
     }
 
-    // Update an event
+    // ✅ FETCH A SINGLE EVENT
+    public function show($id)
+    {
+        $event = Event::with('user:id,name,profile_picture')->find($id);
+
+        if (!$event) {
+            return response()->json(['error' => 'Event not found'], 404);
+        }
+
+        return response()->json($event, 200);
+    }
+
+    // ✅ UPDATE EVENT (Only Owner Can Update)
     public function update(Request $request, $id)
     {
-        $event = Event::findOrFail($id);
+        $event = Event::find($id);
+
+        if (!$event) {
+            return response()->json(['error' => 'Event not found'], 404);
+        }
 
         if ($event->user_id !== Auth::id()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $request->validate([
+        $validatedData = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'location' => 'required|string|max:255',
+            'location' => 'nullable|string|max:255',
             'date' => 'required|date',
-            'time' => 'required',
+            'time' => 'required|date_format:H:i',
         ]);
 
-        $event->update($request->all());
+        $event->update($validatedData);
 
-        return response()->json(['message' => 'Event updated successfully', 'event' => $event]);
+        return response()->json(['message' => '✅ Event updated successfully', 'event' => $event], 200);
     }
 
-    // Delete an event
+    // ✅ DELETE EVENT (Only Owner Can Delete)
     public function destroy($id)
-{
-    // Find the event
-    $event = Event::find($id);
+    {
+        $event = Event::find($id);
 
-    // Check if event exists
-    if (!$event) {
-        return response()->json([
-            'message' => 'Event not found'
-        ], 404);
+        if (!$event) {
+            return response()->json(['error' => 'Event not found'], 404);
+        }
+
+        if ($event->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $event->delete();
+
+        return response()->json(['message' => '✅ Event deleted successfully'], 200);
     }
-
-    // Delete the event
-    $event->delete();
-
-    return response()->json([
-        'message' => 'Event deleted successfully'
-    ], 200);
-}
-
 }
