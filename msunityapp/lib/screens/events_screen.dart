@@ -37,7 +37,7 @@ class _EventsScreenState extends State<EventsScreen> {
         future: _eventsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator()); // Loading spinner
+            return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(
               child: Text("⚠️ Error: ${snapshot.error}"),
@@ -48,18 +48,41 @@ class _EventsScreenState extends State<EventsScreen> {
             );
           }
 
-          // Display list of events
           final events = snapshot.data!;
           return ListView.builder(
             itemCount: events.length,
             itemBuilder: (context, index) {
               final event = events[index];
+              final creator = event['user']; // ✅ Correct key
+
+              final creatorName = creator?['name'] ?? 'Unknown User';
+              final creatorProfilePicture = creator?['profile_picture'];
+
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: ListTile(
-                  title: Text(event['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("${event['date']} at ${event['time']}\n${event['location']}"),
-                  isThreeLine: true,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: creatorProfilePicture != null && creatorProfilePicture.isNotEmpty
+                            ? NetworkImage(creatorProfilePicture)
+                            : const NetworkImage("https://www.example.com/default_avatar.png"),
+                      ),
+                      title: Text(
+                        creatorName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: const Text("Event Creator"),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ListTile(
+                        title: Text(event['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text("${event['date']} at ${event['time']}\n${event['location']}"),
+                        isThreeLine: true,
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -76,7 +99,7 @@ class _EventsScreenState extends State<EventsScreen> {
           );
 
           if (result == true) {
-            _refreshEvents(); // Refresh event list if an event was created
+            _refreshEvents();
           }
         },
         child: const Icon(Icons.add),

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  final String baseUrl = "http://192.168.1.13:8000/api"; // Change to your API's IP
+  final String baseUrl = "http://192.168.1.5:8000/api"; // Change this to your API's IP
 
   // ✅ REGISTER USER
   Future<String> registerUser(String name, String email, String password) async {
@@ -14,18 +14,12 @@ class ApiService {
         body: jsonEncode({"name": name, "email": email, "password": password}),
       );
 
-      print("🔹 Register Response: ${response.statusCode} - ${response.body}");
-
       final data = jsonDecode(response.body);
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        return data["message"] ?? "User registered successfully!";
-      } else {
-        return data["error"] ?? "Registration failed!";
-      }
+      return response.statusCode == 201 || response.statusCode == 200
+          ? data["message"] ?? "User registered successfully!"
+          : data["error"] ?? "Registration failed!";
     } catch (e) {
-      print("❌ Registration Error: $e");
-      return "Something went wrong. Please try again!";
+      return "❌ Registration Error: $e";
     }
   }
 
@@ -38,11 +32,8 @@ class ApiService {
         body: jsonEncode({"email": email, "password": password}),
       );
 
-      print("🔹 Login Response: ${response.statusCode} - ${response.body}");
-
       final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && data['token'] != null) {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString("token", data['token']); // Save token
         return data['token'];
@@ -50,16 +41,14 @@ class ApiService {
         return data["error"] ?? "Login failed!";
       }
     } catch (e) {
-      print("❌ Login Error: $e");
-      return "Something went wrong. Please try again!";
+      return "❌ Login Error: $e";
     }
   }
 
-  // ✅ LOGOUT USER (Clears token)
+  // ✅ LOGOUT USER
   Future<void> logoutUser() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.remove("token"); // Remove stored token
-    print("🔹 User logged out.");
+    await prefs.remove("token");
   }
 
   // ✅ GET STORED TOKEN
@@ -82,21 +71,23 @@ class ApiService {
         },
       );
 
-      print("🔹 Fetch Events Response: ${response.statusCode} - ${response.body}");
-
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final List<dynamic> events = jsonDecode(response.body);
+
+        // ✅ Ensure event objects contain user details (Fixes possible null errors)
+        for (var event in events) {
+          event['user'] ??= {"name": "Unknown", "profile_picture": ""};
+        }
+        return events;
       } else {
-        print("❌ Failed to fetch events: ${response.body}");
-        return [];
+        throw Exception("Failed to fetch events. Status Code: ${response.statusCode}");
       }
     } catch (e) {
-      print("❌ Fetch Events Error: $e");
       return [];
     }
   }
 
-  // ✅ CREATE EVENT (WITH TOKEN)
+  // ✅ CREATE EVENT
   Future<String> createEvent({
     required String title,
     required String description,
@@ -124,18 +115,50 @@ class ApiService {
         }),
       );
 
-      print("🔹 Create Event Response: ${response.statusCode} - ${response.body}");
+      final data = jsonDecode(response.body);
+      return response.statusCode == 201
+          ? data["message"] ?? "Event created successfully!"
+          : data["error"] ?? "Failed to create event.";
+    } catch (e) {
+      return "❌ Create Event Error: $e";
+    }
+  }
+
+  // ✅ UPDATE EVENT
+  Future<String> updateEvent({
+    required int eventId,
+    required String title,
+    required String description,
+    required String location,
+    required String date,
+    required String time,
+  }) async {
+    try {
+      String? token = await getToken();
+      if (token == null) return "❌ No token found. Please log in again.";
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/events/$eventId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'title': title,
+          'description': description,
+          'location': location,
+          'date': date,
+          'time': time,
+        }),
+      );
 
       final data = jsonDecode(response.body);
-
-      if (response.statusCode == 201) {
-        return data["message"] ?? "Event created successfully!";
-      } else {
-        return data["error"] ?? "Failed to create event.";
-      }
+      return response.statusCode == 200
+          ? data["message"] ?? "Event updated successfully!"
+          : data["error"] ?? "Failed to update event.";
     } catch (e) {
-      print("❌ Create Event Error: $e");
-      return "Something went wrong. Please try again!";
+      return "❌ Update Event Error: $e";
     }
   }
 
@@ -153,16 +176,57 @@ class ApiService {
         },
       );
 
-      print("🔹 Delete Event Response: ${response.statusCode} - ${response.body}");
-
-      if (response.statusCode == 200) {
-        return "✅ Event deleted successfully!";
-      } else {
-        return "❌ Failed to delete event.";
-      }
+      return response.statusCode == 200
+          ? "✅ Event deleted successfully!"
+          : "❌ Failed to delete event.";
     } catch (e) {
-      print("❌ Delete Event Error: $e");
-      return "Something went wrong. Please try again!";
+      return "❌ Delete Event Error: $e";
+    }
+  }
+
+  // ✅ LIKE EVENT
+  Future<String> likeEvent(int eventId) async {
+    try {
+      String? token = await getToken();
+      if (token == null) return "❌ No token found. Please log in again.";
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/events/$eventId/like'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      return response.statusCode == 200
+          ? "❤️ Event liked!"
+          : "❌ Failed to like event.";
+    } catch (e) {
+      return "❌ Like Event Error: $e";
+    }
+  }
+
+  // ✅ COMMENT ON EVENT
+  Future<String> commentOnEvent(int eventId, String comment) async {
+    try {
+      String? token = await getToken();
+      if (token == null) return "❌ No token found. Please log in again.";
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/events/$eventId/comment'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'comment': comment}),
+      );
+
+      return response.statusCode == 201
+          ? "💬 Comment added!"
+          : "❌ Failed to add comment.";
+    } catch (e) {
+      return "❌ Comment Error: $e";
     }
   }
 }
