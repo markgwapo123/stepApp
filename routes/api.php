@@ -12,6 +12,9 @@ Route::get('/test', function () {
     return response()->json(['message' => '🚀 API is working!!!']);
 });
 
+// 📅 Public Events Access
+Route::get('/events', [EventController::class, 'index']); // Get all events
+
 // ✅ Protected Routes (Require Authentication)
 Route::middleware('auth:sanctum')->group(function () {
     // 🔑 Authentication
@@ -20,8 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-    // 📅 Events
-    Route::get('/events', [EventController::class, 'index']); // Get all events
+    // 📅 Events (Protected)
     Route::post('/events', [EventController::class, 'store']); // Create event
     Route::get('/events/{id}', [EventController::class, 'show']); // Get single event
     Route::put('/events/{id}', [EventController::class, 'update']); // Update event

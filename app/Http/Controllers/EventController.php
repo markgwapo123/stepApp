@@ -5,44 +5,51 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Event;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class EventController extends Controller
 {
     // ✅ CREATE EVENT
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'location' => 'nullable|string',
+        $request->validate([
+            'title' => 'required|string',
+            'description' => 'required|string',
+            'location' => 'required|string',
             'date' => 'required|date',
-            'time' => 'required|date_format:H:i',
+            'time' => 'required',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
-
-        $userId = Auth::id(); 
-        if (!$userId) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+    
+        $imagePath = null;
+    
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('event_images', 'public');
+            Log::info("Image uploaded: " . $imagePath); // ✅ Log the image path
         }
-
+    
         $event = Event::create([
-            'title' => $validatedData['title'],
-            'description' => $validatedData['description'] ?? null,
-            'location' => $validatedData['location'] ?? null,
-            'date' => $validatedData['date'],
-            'time' => $validatedData['time'],
-            'user_id' => $userId,
+            'user_id' => auth()->id(),
+            'title' => $request->title,
+            'description' => $request->description,
+            'location' => $request->location,
+            'date' => $request->date,
+            'time' => $request->time,
+            'image' => $imagePath,
         ]);
-
+    
         return response()->json([
-            'message' => '✅ Event created successfully!',
+            'message' => 'Event created successfully!',
             'event' => $event
         ], 201);
     }
-
-    // ✅ FETCH ALL EVENTS (With User Details)
+    
+    // ✅ FETCH ALL EVENTS
     public function index()
     {
-        $events = Event::with('user:id,name,profile_picture')->get(); // Fetch events with user info
+        $events = Event::with('user:id,name,profile_picture')->get();
+
         return response()->json($events, 200);
     }
 
@@ -76,12 +83,25 @@ class EventController extends Controller
             'description' => 'nullable|string',
             'location' => 'nullable|string|max:255',
             'date' => 'required|date',
-            'time' => 'required|date_format:H:i',
+            'time' => 'required',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        // ✅ Handle Image Update
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($event->image) {
+                Storage::disk('public')->delete($event->image);
+            }
+            $validatedData['image'] = $request->file('image')->store('event_images', 'public');
+        }
 
         $event->update($validatedData);
 
-        return response()->json(['message' => '✅ Event updated successfully', 'event' => $event], 200);
+        return response()->json([
+            'message' => '✅ Event updated successfully!',
+            'event' => $event
+        ], 200);
     }
 
     // ✅ DELETE EVENT (Only Owner Can Delete)
@@ -95,6 +115,11 @@ class EventController extends Controller
 
         if ($event->user_id !== Auth::id()) {
             return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // ✅ Delete Image
+        if ($event->image) {
+            Storage::disk('public')->delete($event->image);
         }
 
         $event->delete();
