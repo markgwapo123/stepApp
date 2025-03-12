@@ -29,7 +29,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/events/{id}', [EventController::class, 'update']); // Update event
     Route::delete('/events/{id}', [EventController::class, 'destroy']); // Delete event
 
-    // 👍 Like & 💬 Comment
+    // ✅ New Routes
+    Route::get('/user-events', [EventController::class, 'userEvents']); // Fetch upcoming events created by the logged-in user
+    Route::get('/suggested-events', [EventController::class, 'suggestedEvents']); // Fetch events created by other users
+
+    // 👍 Like & 💬 Comment (Assuming these functions exist in your EventController)
     Route::post('/events/{id}/like', [EventController::class, 'likeEvent']);
     Route::post('/events/{id}/comment', [EventController::class, 'commentOnEvent']);
 });
