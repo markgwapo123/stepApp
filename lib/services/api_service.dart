@@ -12,7 +12,7 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-  final String baseUrl = "http://192.168.1.26:8000/api"; // Change to your API URL
+  final String baseUrl = "http://192.168.1.11:8000/api"; // Change to your API URL
 
   // ✅ REGISTER USER
   Future<String> registerUser(String name, String email, String password) async {
