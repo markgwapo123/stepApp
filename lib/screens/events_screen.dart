@@ -277,7 +277,7 @@ class _EventsScreenState extends State<EventsScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () async {
-                          await widget.apiService.markEventAsInterested(event['id']);
+                          
 
                           _refreshEvents();
                         },

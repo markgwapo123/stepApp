@@ -16,38 +16,38 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMessage;
 
   void _login() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-      });
+  if (_formKey.currentState!.validate()) {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-      String? token = await apiService.loginUser(
-        _emailController.text,
-        _passwordController.text,
-      );
+    String? token = await apiService.loginUser(
+      _emailController.text,
+      _passwordController.text,
+      apiService, // 👈 Make sure to pass this if your loginUser expects it
+    );
 
-      setState(() {
-        _isLoading = false;
-      });
+    setState(() {
+      _isLoading = false;
+    });
 
-      if (token != null) {
-        // Get isAdmin from SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        bool isAdmin = prefs.getBool("isAdmin") ?? false;
+    if (token != null) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      bool isAdmin = prefs.getBool("isAdmin") ?? false;
 
-        if (isAdmin) {
-          Navigator.pushReplacementNamed(context, "/admin_dashboard");
-        } else {
-          Navigator.pushReplacementNamed(context, "/events");
-        }
+      if (isAdmin) {
+        Navigator.pushReplacementNamed(context, "/admin_dashboard"); // 👈 Your admin screen
       } else {
-        setState(() {
-          _errorMessage = "Login failed. Please check your credentials.";
-        });
+        Navigator.pushReplacementNamed(context, "/events"); // 👈 Normal user screen
       }
+    } else {
+      setState(() {
+        _errorMessage = "Login failed. Please check your credentials.";
+      });
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -59,10 +59,11 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(
-                'assets/login.jpeg',
-                height: 100,
-              ),
+             Image.asset(
+  'assets/login.jpeg',
+  height: 100,
+),
+
               SizedBox(height: 20),
               Text(
                 "Welcome to MSUnityApp",

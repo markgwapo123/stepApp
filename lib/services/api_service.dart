@@ -40,7 +40,7 @@ class ApiService {
 
 
 
- Future<String?> loginUser(String email, String password) async {
+ Future<String?> loginUser(String email, String password, ApiService apiService) async {
   try {
     final response = await http.post(
       Uri.parse('$baseUrl/login'),
@@ -48,15 +48,22 @@ class ApiService {
       body: jsonEncode({"email": email, "password": password}),
     );
 
-    final data = jsonDecode(response.body);
     debugPrint("🔹 Login Response: ${response.body}");
 
+    final data = jsonDecode(response.body);
+
     if (response.statusCode == 200 && data['token'] != null) {
+      // ✅ Set the token in the ApiService instance
+      apiService.setToken(data['token']);
+
+      // ✅ Store in SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString("token", data['token']);
-      await prefs.setBool("isAdmin", data['user']?['is_admin'] == 1); // FIX HERE
+      await prefs.setBool("isAdmin", data['user']?['is_admin'] == 1);
+
       return data['token'];
     } else {
+      debugPrint("❌ Login failed: ${data['message']}");
       return null;
     }
   } catch (e) {
@@ -64,6 +71,7 @@ class ApiService {
     return null;
   }
 }
+
 
 
   // Logout
@@ -121,6 +129,9 @@ class ApiService {
     }
   }
 
+
+
+
   // Fetch Events
   Future<List<dynamic>> fetchEvents() async {
     try {
@@ -158,6 +169,7 @@ class ApiService {
     File? image,
     String? imageBase64,
   }) async {
+      debugPrint("🔹 createEvent called: $title at $date $time"); // add this
     try {
       final token = await getToken();
       if (token == null) return "❌ No token found";
@@ -279,30 +291,7 @@ class ApiService {
     }
   }
 
-  // Mark Event as Interested
-  Future<String> markEventAsInterested(int eventId) async {
-    try {
-      final token = await getToken();
-      if (token == null) return "❌ No token found";
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/events/$eventId/interested'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        return "✅ Marked as interested!";
-      } else {
-        return "❌ Failed to mark event as interested";
-      }
-    } catch (e) {
-      debugPrint("❌ Mark Interested Error: $e");
-      return "❌ Mark Interested Error: $e";
-    }
-  }
 
   // Admin: Fetch All Users
   Future<List<dynamic>> fetchAllUsers() async {
@@ -384,4 +373,41 @@ class ApiService {
     return false;
   }
 }
+
+
+
+  String token = '';
+
+  // Call this after login or load from storage
+  void setToken(String newToken) {
+    token = newToken;
+  }
+
+Map<String, String> _headers() {
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': 'Bearer $token', // ✅ Token must be set correctly
+  };
+}
+
+
+ 
+  // Get events by user
+  Future<List<dynamic>> getEventsByUser(int userId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/events/by-user/$userId'),
+      headers: _headers(),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      print('Failed to load events: ${response.statusCode} - ${response.body}');
+      throw Exception('Failed to load events');
+    }
+  }
+
+
+
 }
