@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\AdminUserController;
 
 // ✅ Public Routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -29,11 +30,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/events/{id}', [EventController::class, 'update']); // Update event
     Route::delete('/events/{id}', [EventController::class, 'destroy']); // Delete event
 
-    // ✅ New Routes
-    Route::get('/user-events', [EventController::class, 'userEvents']); // Fetch upcoming events created by the logged-in user
-    Route::get('/suggested-events', [EventController::class, 'suggestedEvents']); // Fetch events created by other users
+    // ✅ User-specific Events
+    Route::get('/user-events', [EventController::class, 'userEvents']); // Events by logged-in user
+    Route::get('/suggested-events', [EventController::class, 'suggestedEvents']); // Events by other users
 
-    // 👍 Like & 💬 Comment (Assuming these functions exist in your EventController)
+    // 👍 Like & 💬 Comment
     Route::post('/events/{id}/like', [EventController::class, 'likeEvent']);
     Route::post('/events/{id}/comment', [EventController::class, 'commentOnEvent']);
+
+    // 🛠️ Admin Routes
+    Route::middleware('admin')->group(function () {
+        Route::get('/admin/users', [AdminUserController::class, 'index']);
+        Route::get('/admin/users/{id}', [AdminUserController::class, 'show']);
+        Route::put('/admin/users/{id}', [AdminUserController::class, 'update']);
+        Route::delete('/admin/users/{id}', [AdminUserController::class, 'destroy']);
+    });
 });

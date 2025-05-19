@@ -2,35 +2,46 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Event;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
 
 class EventController extends Controller
 {
-    // ✅ CREATE EVENT
+    public function index()
+    {
+        $events = Event::with('user:id,name,profile_picture')->get();
+        return response()->json($events);
+    }
+
+    public function show($id)
+    {
+        $event = Event::with('user:id,name,profile_picture')->find($id);
+        if (!$event) {
+            return response()->json(['error' => 'Event not found'], 404);
+        }
+        return response()->json($event);
+    }
+
     public function store(Request $request)
     {
+        $user = Auth::user();
+        if (!$user) return response()->json(['error' => 'Unauthenticated'], 401);
+
         $request->validate([
-            'title' => 'required|string',
+            'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'location' => 'required|string',
+            'location' => 'required|string|max:255',
             'date' => 'required|date',
             'time' => 'required',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
-    
-        $imagePath = null;
-    
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('event_images', 'public');
-            Log::info("Image uploaded: " . $imagePath); // ✅ Log the image path
-        }
-    
+
+        $imagePath = $request->hasFile('image') ? $request->file('image')->store('event_images', 'public') : null;
+
         $event = Event::create([
-            'user_id' => auth()->id(),
+            'user_id' => $user->id,
             'title' => $request->title,
             'description' => $request->description,
             'location' => $request->location,
@@ -38,47 +49,21 @@ class EventController extends Controller
             'time' => $request->time,
             'image' => $imagePath,
         ]);
-    
-        return response()->json([
-            'message' => 'Event created successfully!',
-            'event' => $event
-        ], 201);
-    }
-    
-    // ✅ FETCH ALL EVENTS
-    public function index()
-    {
-        $events = Event::with('user:id,name,profile_picture')->get();
 
-        return response()->json($events, 200);
+        return response()->json(['message' => 'Event created successfully!', 'event' => $event], 201);
     }
 
-    // ✅ FETCH A SINGLE EVENT
-    public function show($id)
-    {
-        $event = Event::with('user:id,name,profile_picture')->find($id);
-
-        if (!$event) {
-            return response()->json(['error' => 'Event not found'], 404);
-        }
-
-        return response()->json($event, 200);
-    }
-
-    // ✅ UPDATE EVENT (Only Owner Can Update)
     public function update(Request $request, $id)
     {
         $event = Event::find($id);
+        if (!$event) return response()->json(['error' => 'Event not found'], 404);
 
-        if (!$event) {
-            return response()->json(['error' => 'Event not found'], 404);
-        }
-
-        if ($event->user_id !== Auth::id()) {
+        $user = Auth::user();
+        if (!$user || $event->user_id !== $user->id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $validatedData = $request->validate([
+        $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'location' => 'nullable|string|max:255',
@@ -87,45 +72,87 @@ class EventController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // ✅ Handle Image Update
+        $data = $request->only(['title', 'description', 'location', 'date', 'time']);
+
         if ($request->hasFile('image')) {
-            // Delete old image if exists
-            if ($event->image) {
-                Storage::disk('public')->delete($event->image);
-            }
-            $validatedData['image'] = $request->file('image')->store('event_images', 'public');
+            if ($event->image) Storage::disk('public')->delete($event->image);
+            $data['image'] = $request->file('image')->store('event_images', 'public');
         }
 
-        $event->update($validatedData);
+        $event->update($data);
 
-        return response()->json([
-            'message' => '✅ Event updated successfully!',
-            'event' => $event
-        ], 200);
+        return response()->json(['message' => 'Event updated successfully!', 'event' => $event]);
     }
 
-    // ✅ DELETE EVENT (Only Owner Can Delete)
     public function destroy($id)
     {
         $event = Event::find($id);
+        if (!$event) return response()->json(['error' => 'Event not found'], 404);
 
-        if (!$event) {
-            return response()->json(['error' => 'Event not found'], 404);
-        }
-
-        if ($event->user_id !== Auth::id()) {
+        $user = Auth::user();
+        if (!$user || $event->user_id !== $user->id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        // ✅ Delete Image
-        if ($event->image) {
-            Storage::disk('public')->delete($event->image);
-        }
+        if ($event->image) Storage::disk('public')->delete($event->image);
 
         $event->delete();
 
-        return response()->json(['message' => '✅ Event deleted successfully'], 200);
+        return response()->json(['message' => 'Event deleted successfully']);
     }
 
-    
+    public function toggleInterested($id)
+    {
+        $user = Auth::user();
+        if (!$user) return response()->json(['error' => 'Unauthenticated'], 401);
+
+        $event = Event::find($id);
+        if (!$event) return response()->json(['error' => 'Event not found'], 404);
+
+        $alreadyInterested = $user->interestedEvents()->where('event_id', $id)->exists();
+
+        if ($alreadyInterested) {
+            $user->interestedEvents()->detach($id);
+            $status = 'removed';
+        } else {
+            $user->interestedEvents()->attach($id);
+            $status = 'added';
+        }
+
+        $interestedEvents = $user->interestedEvents()->with('user:id,name,profile_picture')->get();
+
+        return response()->json([
+            'message' => "Interested event $status successfully.",
+            'interested_events' => $interestedEvents,
+        ]);
+    }
+
+    public function myInterestedEvents()
+    {
+        $user = Auth::user();
+        if (!$user) return response()->json(['error' => 'Unauthenticated'], 401);
+
+        $interestedEvents = $user->interestedEvents()->with('user:id,name,profile_picture')->get();
+        return response()->json($interestedEvents);
+    }
+
+    public function userEvents()
+    {
+        $user = Auth::user();
+        if (!$user) return response()->json(['error' => 'Unauthenticated'], 401);
+
+        $events = Event::where('user_id', $user->id)->with('user:id,name,profile_picture')->get();
+        return response()->json($events);
+    }
+
+    public function suggestedEvents()
+    {
+        $user = Auth::user();
+        if (!$user) return response()->json(['error' => 'Unauthenticated'], 401);
+
+        $events = Event::where('user_id', '!=', $user->id)->with('user:id,name,profile_picture')->get();
+        return response()->json($events);
+    }
+
+    // You can implement likeEvent() and commentOnEvent() if needed
 }
