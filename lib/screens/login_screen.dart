@@ -32,7 +32,15 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       if (token != null) {
-        Navigator.pushReplacementNamed(context, "/events");
+        // Get isAdmin from SharedPreferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        bool isAdmin = prefs.getBool("isAdmin") ?? false;
+
+        if (isAdmin) {
+          Navigator.pushReplacementNamed(context, "/admin_dashboard");
+        } else {
+          Navigator.pushReplacementNamed(context, "/events");
+        }
       } else {
         setState(() {
           _errorMessage = "Login failed. Please check your credentials.";
@@ -51,11 +59,10 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-             Image.asset(
-  'assets/login.jpeg',
-  height: 100,
-),
-
+              Image.asset(
+                'assets/login.jpeg',
+                height: 100,
+              ),
               SizedBox(height: 20),
               Text(
                 "Welcome to MSUnityApp",

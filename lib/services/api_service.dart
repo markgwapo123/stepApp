@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -8,14 +9,14 @@ import 'package:mime/mime.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ApiService {
-  static final ApiService _instance = ApiService._internal(); // Singleton Pattern
+  static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
 
-  final String baseUrl = "http://192.168.1.11:8000/api"; // Change to your API URL
+  final String baseUrl = "http://192.168.1.6:8000/api";
 
-  // ✅ REGISTER USER
-  Future<String> registerUser(String name, String email, String password) async {
+  // Register User
+  Future<String> registerUser (String name, String email, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/register'),
@@ -26,69 +27,120 @@ class ApiService {
       final data = jsonDecode(response.body);
       debugPrint("🔹 Register Response: ${response.body}");
 
-      return (response.statusCode == 201 || response.statusCode == 200)
-          ? data["message"] ?? "User registered successfully!"
-          : data["error"] ?? "Registration failed!";
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return data["message"] ?? "User  registered successfully!";
+      } else {
+        return data["error"] ?? "Registration failed!";
+      }
     } catch (e) {
       debugPrint("❌ Registration Error: $e");
       return "❌ Registration Error: $e";
     }
   }
 
-  // ✅ LOGIN USER
-  Future<String?> loginUser(String email, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/login'),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email, "password": password}),
-      );
 
-      final data = jsonDecode(response.body);
-      debugPrint("🔹 Login Response: ${response.body}");
 
-      if (response.statusCode == 200 && data['token'] != null) {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString("token", data['token']);
-        return data['token'];
-      } else {
-        return data["error"] ?? "Login failed!";
-      }
-    } catch (e) {
-      debugPrint("❌ Login Error: $e");
-      return "❌ Login Error: $e";
+ Future<String?> loginUser(String email, String password) async {
+  try {
+    final response = await http.post(
+      Uri.parse('$baseUrl/login'),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"email": email, "password": password}),
+    );
+
+    final data = jsonDecode(response.body);
+    debugPrint("🔹 Login Response: ${response.body}");
+
+    if (response.statusCode == 200 && data['token'] != null) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString("token", data['token']);
+      await prefs.setBool("isAdmin", data['user']?['is_admin'] == 1); // FIX HERE
+      return data['token'];
+    } else {
+      return null;
     }
+  } catch (e) {
+    debugPrint("❌ Login Error: $e");
+    return null;
   }
+}
 
-  // ✅ LOGOUT USER
-  Future<void> logoutUser() async {
+
+  // Logout
+  Future<void> logoutUser () async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove("token");
+    await prefs.remove("isAdmin");
   }
 
-  // ✅ GET STORED TOKEN
+  // Token
   Future<String?> getToken() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString("token");
   }
 
-  // ✅ FETCH EVENTS
+  // Fetch User Info
+  Future<Map<String, dynamic>> getUserInfo() async {
+    try {
+      final token = await getToken();
+      if (token == null) throw Exception("No token found");
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception("Failed to fetch user data");
+      }
+    } catch (e) {
+      debugPrint("❌ Fetch User Info Error: $e");
+      throw e; // Rethrow the error for handling in the calling function
+    }
+  }
+
+  // Admin Check
+  Future<bool> isAdmin() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool("isAdmin") ?? false;
+  }
+
+  // Pick Image
+  Future<File?> pickImage() async {
+    try {
+      final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+      return pickedFile != null ? File(pickedFile.path) : null;
+    } catch (e) {
+      debugPrint("❌ Pick Image Error: $e");
+      return null;
+    }
+  }
+
+  // Fetch Events
   Future<List<dynamic>> fetchEvents() async {
     try {
-      String? token = await getToken();
-      if (token == null) throw Exception("No token found. Please log in again.");
+      final token = await getToken();
+      if (token == null) throw Exception("No token found");
 
       final response = await http.get(
         Uri.parse('$baseUrl/events'),
-        headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
       );
 
       debugPrint("🔹 Fetch Events Response: ${response.body}");
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return jsonDecode(response.body) as List<dynamic>;
       } else {
-        throw Exception("Failed to fetch events. Status Code: ${response.statusCode}");
+        throw Exception("Failed to fetch events");
       }
     } catch (e) {
       debugPrint("❌ Fetch Events Error: $e");
@@ -96,75 +148,63 @@ class ApiService {
     }
   }
 
+  // Create Event
+  Future<String> createEvent({
+    required String title,
+    required String description,
+    required String location,
+    required String date,
+    required String time,
+    File? image,
+    String? imageBase64,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) return "❌ No token found";
 
-  // ✅ Get Token
+      final uri = Uri.parse('$baseUrl/events');
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..fields['title'] = title
+        ..fields['description'] = description
+        ..fields['location'] = location
+        ..fields['date'] = date
+        ..fields['time'] = time;
 
+      if (image != null && await image.exists()) {
+        final mimeType = lookupMimeType(image.path) ?? 'image/jpeg';
+        request.files.add(await http.MultipartFile.fromPath(
+          'image',
+          image.path,
+          contentType: MediaType.parse(mimeType),
+        ));
+      } else if (imageBase64 != null) {
+        final cleaned = imageBase64.replaceAll(RegExp(r'data:image/[^;]+;base64,'), '');
+        final bytes = base64Decode(cleaned);
+        request.files.add(http.MultipartFile.fromBytes(
+          'image',
+          bytes,
+          filename: 'event_image.jpg',
+          contentType: MediaType('image', 'jpeg'),
+        ));
+      }
 
-  // ✅ Pick Image from Gallery
- Future<File?> pickImage() async {
-  final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-  return pickedFile != null ? File(pickedFile.path) : null;
-}
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      final data = jsonDecode(responseBody);
 
-  // ✅ Create Event (with Image Upload)
-
-Future<String> createEvent({
-  required String title,
-  required String description,
-  required String location,
-  required String date,
-  required String time,
-  File? image,
-  String? imageBase64,
-}) async {
-  try {
-    String? token = await getToken();
-    if (token == null) return "❌ No token found. Please log in again.";
-
-    var uri = Uri.parse('$baseUrl/events');
-    var request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..fields['title'] = title
-      ..fields['description'] = description
-      ..fields['location'] = location
-      ..fields['date'] = date
-      ..fields['time'] = time;
-
-    // ✅ Attach Image if Available (Image File)
-    if (image != null && await image.exists()) {
-      String mimeType = lookupMimeType(image.path) ?? "image/jpeg";
-      request.files.add(await http.MultipartFile.fromPath(
-        'image',
-        image.path,
-        contentType: MediaType.parse(mimeType),
-      ));
-    } 
-    // ✅ Attach Image if Available (Base64 Image)
-    else if (imageBase64 != null) {
-      String base64Str = imageBase64.replaceAll('data:image/png;base64,', '').replaceAll('data:image/jpeg;base64,', '');
-      request.files.add(http.MultipartFile.fromBytes(
-        'image',
-        base64Decode(base64Str),
-        filename: 'event_image.jpg',
-        contentType: MediaType('image', 'jpeg'),
-      ));
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return data["message"] ?? "✅ Event created successfully!";
+      } else {
+        return "❌ Failed to create event. ${data['message'] ?? responseBody}";
+      }
+    } catch (e) {
+      debugPrint("❌ Create Event Error: $e");
+      return "❌ Create Event Error: $e";
     }
-
-    var response = await request.send();
-    var responseBody = await response.stream.bytesToString();
-    var data = jsonDecode(responseBody);
-
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      return data["message"] ?? "✅ Event created successfully!";
-    } else {
-      return "❌ Failed to create event. Status: ${response.statusCode}, Message: ${data['message'] ?? responseBody}";
-    }
-  } catch (e) {
-    return "❌ Create Event Error: $e";
   }
-}
 
-  // ✅ Update Event (with Image Upload)
+  // Update Event
   Future<String> updateEvent({
     required int eventId,
     required String title,
@@ -175,22 +215,21 @@ Future<String> createEvent({
     File? image,
   }) async {
     try {
-      String? token = await getToken();
-      if (token == null) return "❌ No token found. Please log in again.";
+      final token = await getToken();
+      if (token == null) return "❌ No token found";
 
-      var uri = Uri.parse('$baseUrl/events/$eventId');
-
-      var request = http.MultipartRequest('POST', uri)
+      final uri = Uri.parse('$baseUrl/events/$eventId');
+      final request = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $token'
+        ..fields['_method'] = 'PUT'
         ..fields['title'] = title
         ..fields['description'] = description
         ..fields['location'] = location
         ..fields['date'] = date
-        ..fields['time'] = time.substring(0, 5)
-        ..fields['_method'] = 'PUT'; // Laravel needs this for multipart PUT
+        ..fields['time'] = time;
 
       if (image != null && await image.exists()) {
-        String? mimeType = lookupMimeType(image.path) ?? "image/jpeg";
+        final mimeType = lookupMimeType(image.path) ?? 'image/jpeg';
         request.files.add(await http.MultipartFile.fromPath(
           'image',
           image.path,
@@ -198,23 +237,26 @@ Future<String> createEvent({
         ));
       }
 
-      var response = await request.send();
-      var responseBody = await response.stream.bytesToString();
-      var data = jsonDecode(responseBody);
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+      final data = jsonDecode(responseBody);
 
-      return response.statusCode == 200
-          ? data["message"] ?? "✅ Event updated successfully!"
-          : "❌ Failed to update event. Status: ${response.statusCode}, Message: ${data['message'] ?? responseBody}";
+      if (response.statusCode == 200) {
+        return data["message"] ?? "✅ Event updated successfully!";
+      } else {
+        return "❌ Failed to update event. ${data['message'] ?? responseBody}";
+      }
     } catch (e) {
+      debugPrint("❌ Update Event Error: $e");
       return "❌ Update Event Error: $e";
     }
   }
 
-  // ✅ Delete Event
+  // Delete Event
   Future<String> deleteEvent(int eventId) async {
     try {
-      String? token = await getToken();
-      if (token == null) return "❌ No token found. Please log in again.";
+      final token = await getToken();
+      if (token == null) return "❌ No token found";
 
       final response = await http.delete(
         Uri.parse('$baseUrl/events/$eventId'),
@@ -224,14 +266,122 @@ Future<String> createEvent({
         },
       );
 
+      final data = jsonDecode(response.body);
+
       if (response.statusCode == 200) {
         return "✅ Event deleted successfully!";
       } else {
-        var data = json.decode(response.body);
-        return "❌ Failed to delete event. Status: ${response.statusCode}, Message: ${data['message'] ?? 'Unknown error'}";
+        return "❌ Failed to delete event. ${data['message'] ?? 'Unknown error'}";
       }
     } catch (e) {
+      debugPrint("❌ Delete Event Error: $e");
       return "❌ Delete Event Error: $e";
     }
   }
+
+  // Mark Event as Interested
+  Future<String> markEventAsInterested(int eventId) async {
+    try {
+      final token = await getToken();
+      if (token == null) return "❌ No token found";
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/events/$eventId/interested'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return "✅ Marked as interested!";
+      } else {
+        return "❌ Failed to mark event as interested";
+      }
+    } catch (e) {
+      debugPrint("❌ Mark Interested Error: $e");
+      return "❌ Mark Interested Error: $e";
+    }
+  }
+
+  // Admin: Fetch All Users
+  Future<List<dynamic>> fetchAllUsers() async {
+    try {
+      final token = await getToken();
+      if (token == null) throw Exception("No token found");
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/admin/users'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as List<dynamic>;
+      } else {
+        throw Exception("Failed to fetch users");
+      }
+    } catch (e) {
+      debugPrint("❌ Fetch Users Error: $e");
+      return [];
+    }
+  }
+
+  // Admin: Update User
+  Future<String> updateUser(int userId, String name, String email) async {
+    try {
+      final token = await getToken();
+      if (token == null) return "❌ No token found";
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/admin/users/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "name": name,
+          "email": email,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data['message'] ?? "✅ User updated successfully!";
+      } else {
+        return "❌ Failed to update user: ${data['message'] ?? 'Unknown error'}";
+      }
+    } catch (e) {
+      debugPrint("❌ Update User Error: $e");
+      return "❌ Update User Error: $e";
+    }
+  }
+
+  // Admin: Delete User
+  Future<bool> deleteUser(int userId) async {
+  try {
+    final token = await getToken();
+    if (token == null) return false;
+
+    final response = await http.delete(
+      Uri.parse('$baseUrl/admin/users/$userId'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (e) {
+    debugPrint("❌ Delete User Error: $e");
+    return false;
+  }
+}
 }
