@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
+    
 
     protected $fillable = [
         'name',
@@ -40,5 +41,6 @@ class User extends Authenticatable
     {
         // Events created by this user
         return $this->hasMany(Event::class, 'user_id');
+        
     }
 }

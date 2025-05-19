@@ -45,4 +45,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin/users/{id}', [AdminUserController::class, 'update']);
         Route::delete('/admin/users/{id}', [AdminUserController::class, 'destroy']);
     });
+    Route::get('/admin/users', [App\Http\Controllers\UserController::class, 'fetchAllUsersWithEventCount']);
+    Route::get('/events/by-user/{userId}', [EventController::class, 'getEventsByUser']);
+    
+
+
+
+
+
 });
