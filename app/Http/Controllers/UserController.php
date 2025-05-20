@@ -16,17 +16,18 @@ class UserController extends Controller
 }
 
     public function fetchAllUsersWithEventCount()
-    {
-        $users = User::withCount('events')->get();
+{
+    $users = User::withCount('events')->get();
 
-        return response()->json($users->map(function ($user) {
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'profile_picture' => $user->profile_picture,
-                'event_count' => $user->events_count,
-            ];
-        }));
-    }
+    return response()->json($users->map(function ($user) {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'profile_picture' => $user->profile_picture,
+            'events_count' => $user->events_count,  // <--- plural here
+        ];
+    }));
+}
+
 }

@@ -55,35 +55,40 @@ class EventController extends Controller
     }
 
     public function update(Request $request, $id)
-    {
-        $event = Event::find($id);
-        if (!$event) return response()->json(['error' => 'Event not found'], 404);
-
-        $user = Auth::user();
-        if (!$user || $event->user_id !== $user->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'location' => 'nullable|string|max:255',
-            'date' => 'required|date',
-            'time' => 'required',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
-
-        $data = $request->only(['title', 'description', 'location', 'date', 'time']);
-
-        if ($request->hasFile('image')) {
-            if ($event->image) Storage::disk('public')->delete($event->image);
-            $data['image'] = $request->file('image')->store('event_images', 'public');
-        }
-
-        $event->update($data);
-
-        return response()->json(['message' => 'Event updated successfully!', 'event' => $event]);
+{
+    $event = Event::find($id);
+    if (!$event) {
+        return response()->json(['error' => 'Event not found'], 404);
     }
+
+    $user = Auth::user();
+    if (!$user || $event->user_id !== $user->id) {
+        return response()->json(['error' => 'Unauthorized'], 403);
+    }
+
+    $request->validate([
+        'title' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'location' => 'nullable|string|max:255',
+        'date' => 'required|date',
+        'time' => 'required',
+        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+    ]);
+
+    $data = $request->only(['title', 'description', 'location', 'date', 'time']);
+
+    if ($request->hasFile('image')) {
+        if ($event->image) {
+            Storage::disk('public')->delete($event->image);
+        }
+        $data['image'] = $request->file('image')->store('event_images', 'public');
+    }
+
+    $event->update($data);
+
+    return response()->json(['message' => 'Event updated successfully!', 'event' => $event]);
+}
+
 
     public function destroy($id)
     {
@@ -129,6 +134,7 @@ public function getEventsByUser($id)
     $events = Event::where('user_id', $id)->get();
     return response()->json($events);
 }
+
 
 
 

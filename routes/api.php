@@ -49,6 +49,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/events/by-user/{userId}', [EventController::class, 'getEventsByUser']);
     
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::put('/events/{id}', [EventController::class, 'update']);
+});
 
 
 
