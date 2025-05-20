@@ -59,6 +59,10 @@ class _EventsScreenState extends State<EventsScreen> {
             child: Column(
               children: [
                 _buildHeaderFilters(),
+
+
+          
+
                 Expanded(
                   child: FutureBuilder<List<dynamic>>(
                     future: _eventsFuture,
@@ -112,76 +116,141 @@ class _EventsScreenState extends State<EventsScreen> {
     );
   }
 
-  Widget _buildDrawer() {
-    return Drawer(
-      backgroundColor: Colors.grey[900],
-      child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text("Events",
-                style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(height: 15),
-          ListTile(
-            leading: const Icon(Icons.home, color: Colors.white),
-            title: const Text("Home", style: TextStyle(color: Colors.white)),
-            onTap: () {},
-          ),
-          ExpansionTile(
-            initiallyExpanded: _yourEventsExpanded,
-            onExpansionChanged: (expanded) {
-              setState(() {
-                _yourEventsExpanded = expanded;
-              });
-            },
-            leading: const Icon(Icons.person, color: Colors.white),
-            title: const Text("Your Events", style: TextStyle(color: Colors.white)),
-            backgroundColor: Colors.grey[850],
-            collapsedIconColor: Colors.white,
-            iconColor: Colors.white,
-            childrenPadding: const EdgeInsets.only(left: 32),
-            children: [
-              _subDrawerItem(Icons.check_circle, "Going", () {}),
-              _subDrawerItem(Icons.mail, "Invites", () {}),
-              _subDrawerItem(Icons.star, "Interested", () {}),
-              _subDrawerItem(Icons.home_work, "Hosting", () {}),
-              _subDrawerItem(Icons.history, "Past events", () {}),
-            ],
-          ),
-          ListTile(
-            leading: const Icon(Icons.notifications, color: Colors.white),
-            title: const Text("Notifications", style: TextStyle(color: Colors.white)),
-            onTap: () {},
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12),
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        CreateEventScreen(apiService: widget.apiService, token: widget.token),
-                  ),
-                );
-                if (result == true) _refreshEvents();
-              },
-              icon: const Icon(Icons.add),
-              label: const Text("Create new event"),
+ Widget _buildDrawer() {
+  return Drawer(
+    backgroundColor: Colors.grey[1000],
+    child: ListView(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            "Events",
+            style: TextStyle(
+              fontSize: 22,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
             ),
           ),
+        ),
+        const SizedBox(height: 15),
+        ListTile(
+          leading: const Icon(Icons.home, color: Colors.white),
+          title: const Text("Home", style: TextStyle(color: Colors.white)),
+          onTap: () {},
+        ),
+        ExpansionTile(
+          initiallyExpanded: _yourEventsExpanded,
+          onExpansionChanged: (expanded) {
+            setState(() {
+              _yourEventsExpanded = expanded;
+            });
+          },
+          leading: const Icon(Icons.person, color: Colors.white),
+          title: const Text("Your Events", style: TextStyle(color: Colors.white)),
+          backgroundColor: Colors.grey[850],
+          collapsedIconColor: Colors.white,
+          iconColor: Colors.white,
+          childrenPadding: const EdgeInsets.only(left: 32),
+          children: [
+            _subDrawerItem(Icons.check_circle, "Going", () {}),
+            _subDrawerItem(Icons.mail, "Invites", () {}),
+            _subDrawerItem(Icons.star, "Interested", () {}),
+            _subDrawerItem(Icons.home_work, "Hosting", () {}),
+            _subDrawerItem(Icons.history, "Past events", () {}),
+          ],
+        ),
+        ListTile(
+          leading: const Icon(Icons.notifications, color: Colors.white),
+          title: const Text("Notifications", style: TextStyle(color: Colors.white)),
+          onTap: () {},
+        ),
+
+        const SizedBox(height: 20),
+
+        // Create new event button (full width)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              minimumSize: const Size.fromHeight(48), // full width height
+            ),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      CreateEventScreen(apiService: widget.apiService, token: widget.token),
+                ),
+              );
+              if (result == true) _refreshEvents();
+            },
+            icon: const Icon(Icons.add),
+            label: const Text("Create new event"),
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // Logout button (full width)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              minimumSize: const Size.fromHeight(48), // full width height
+            ),
+            onPressed: () {
+              // Implement logout logic here
+              _logout();
+            },
+            icon: const Icon(Icons.logout),
+            label: const Text("Logout"),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// Add this logout method inside _EventsScreenState
+void _logout() async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("Confirm Logout"),
+        content: const Text("Are you sure you want to logout?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), // Cancel
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true), // Confirm
+            child: const Text("Logout"),
+          ),
         ],
-      ),
-    );
+      );
+    },
+  );
+
+  if (confirmed == true) {
+    // Clear any user session or token here if needed
+
+    // Navigate to login screen (replace with your route name)
+    Navigator.pushReplacementNamed(context, '/login');
   }
+}
+
+
 
   Widget _subDrawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
@@ -192,39 +261,47 @@ class _EventsScreenState extends State<EventsScreen> {
   }
 
   Widget _buildHeaderFilters() {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: [
-          _filterChip(Icons.location_on, "My location"),
-          _filterChip(Icons.date_range, "Any date"),
-          _filterChip(Icons.trending_up, "Top", selected: true),
-          _filterChip(Icons.people, "Friends"),
-          _filterChip(Icons.person_add, "Following"),
-        ],
-      ),
-    );
-  }
+  return Padding(
+    padding: const EdgeInsets.all(12),
+    child: Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        _filterChip(Icons.today, "Today", selected: selectedNavIndex == 0),
+        _filterChip(Icons.calendar_today, "Tomorrow", selected: selectedNavIndex == 1),
+        _filterChip(Icons.date_range, "Next week", selected: selectedNavIndex == 2),
+        _filterChip(Icons.calendar_view_month, "Next month", selected: selectedNavIndex == 3),
+      ],
+    ),
+  );
+}
 
-  Widget _filterChip(IconData icon, String label, {bool selected = false}) {
-    return FilterChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 4),
-          Text(label),
-        ],
-      ),
-      selected: selected,
-      onSelected: (_) {},
-      backgroundColor: Colors.grey[300],
-      selectedColor: Colors.blue[200],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-    );
-  }
+
+ Widget _filterChip(IconData icon, String label, {bool selected = false, int? index}) {
+  return FilterChip(
+    label: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16),
+        const SizedBox(width: 4),
+        Text(label),
+      ],
+    ),
+    selected: selected,
+    onSelected: (bool value) {
+      setState(() {
+        if (value) {
+          selectedNavIndex = index ?? 0;
+          // Add any filtering logic here based on the selected filter
+        }
+      });
+    },
+    backgroundColor: Colors.grey[300],
+    selectedColor: Colors.blue[200],
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  );
+}
+
 
   Widget _buildEventCard(dynamic event) {
     final image = event['image'] ?? '';

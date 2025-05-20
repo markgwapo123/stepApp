@@ -81,6 +81,19 @@ class ApiService {
     await prefs.remove("isAdmin");
   }
 
+ Future<void> logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('isAdmin');
+
+    // Optional: If you want to also notify the backend:
+    // await http.post(Uri.parse('$baseUrl/logout'), headers: {
+    //   'Authorization': 'Bearer ${prefs.getString('token')}',
+    // });
+
+    return;
+  }
+
   // Token
   Future<String?> getToken() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -218,52 +231,52 @@ class ApiService {
 
   // Update Event
   Future<String> updateEvent({
-    required int eventId,
-    required String title,
-    required String description,
-    required String location,
-    required String date,
-    required String time,
-    File? image,
-  }) async {
-    try {
-      final token = await getToken();
-      if (token == null) return "❌ No token found";
+  required int eventId,
+  required String title,
+  required String description,
+  required String location,
+  required String date,
+  required String time,
+  File? image,
+}) async {
+  try {
+    final token = await getToken(); // Replace with your method to get token
+    if (token == null) return "❌ No token found";
 
-      final uri = Uri.parse('$baseUrl/events/$eventId');
-      final request = http.MultipartRequest('POST', uri)
-        ..headers['Authorization'] = 'Bearer $token'
-        ..fields['_method'] = 'PUT'
-        ..fields['title'] = title
-        ..fields['description'] = description
-        ..fields['location'] = location
-        ..fields['date'] = date
-        ..fields['time'] = time;
+    final uri = Uri.parse('$baseUrl/events/$eventId');
 
-      if (image != null && await image.exists()) {
-        final mimeType = lookupMimeType(image.path) ?? 'image/jpeg';
-        request.files.add(await http.MultipartFile.fromPath(
-          'image',
-          image.path,
-          contentType: MediaType.parse(mimeType),
-        ));
-      }
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields['_method'] = 'PUT'
+      ..fields['title'] = title
+      ..fields['description'] = description
+      ..fields['location'] = location
+      ..fields['date'] = date
+      ..fields['time'] = time;
 
-      final response = await request.send();
-      final responseBody = await response.stream.bytesToString();
-      final data = jsonDecode(responseBody);
-
-      if (response.statusCode == 200) {
-        return data["message"] ?? "✅ Event updated successfully!";
-      } else {
-        return "❌ Failed to update event. ${data['message'] ?? responseBody}";
-      }
-    } catch (e) {
-      debugPrint("❌ Update Event Error: $e");
-      return "❌ Update Event Error: $e";
+    if (image != null && await image.exists()) {
+      final mimeType = lookupMimeType(image.path) ?? 'image/jpeg';
+      request.files.add(await http.MultipartFile.fromPath(
+        'image',
+        image.path,
+        contentType: MediaType.parse(mimeType),
+      ));
     }
-  }
 
+    final streamedResponse = await request.send();
+    final responseBody = await streamedResponse.stream.bytesToString();
+    final data = jsonDecode(responseBody);
+
+    if (streamedResponse.statusCode == 200) {
+      return data["message"] ?? "✅ Event updated successfully!";
+    } else {
+      return "❌ Failed to update event. ${data['message'] ?? responseBody}";
+    }
+  } catch (e) {
+    debugPrint("❌ Update Event Error: $e");
+    return "❌ Update Event Error: $e";
+  }
+}
   // Delete Event
   Future<String> deleteEvent(int eventId) async {
     try {

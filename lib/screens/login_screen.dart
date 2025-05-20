@@ -61,116 +61,124 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
              Image.asset(
   'assets/login.jpeg',
-  height: 100,
+  height: 200,
 ),
 
               SizedBox(height: 20),
               Text(
                 "Welcome to MSUnityApp",
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 25,
                   fontWeight: FontWeight.bold,
                   color: Colors.blueAccent,
                 ),
               ),
               SizedBox(height: 30),
               Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        hintText: "USERNAME",
-                        filled: true,
-                        fillColor: Colors.grey[200],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      validator: (value) =>
-                          value!.isEmpty ? 'Please enter your email' : null,
-                    ),
-                    SizedBox(height: 15),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        hintText: "PASSWORD",
-                        filled: true,
-                        fillColor: Colors.grey[200],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      validator: (value) =>
-                          value!.isEmpty ? 'Please enter your password' : null,
-                    ),
-                    SizedBox(height: 20),
-                    if (_errorMessage != null)
-                      Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          padding: EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: _isLoading ? null : _login,
-                        child: _isLoading
-                            ? CircularProgressIndicator(
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              )
-                            : Text(
-                                "SIGN IN",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                    TextButton(
-                      onPressed: () {},
-                      child: Text(
-                        "Forgot Password?",
-                        style: TextStyle(color: Colors.blueAccent),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    TextButton(
-                      onPressed: () {},
-                      child: RichText(
-                        text: TextSpan(
-                          text: "Don’t have an account? ",
-                          style: TextStyle(color: Colors.black),
-                          children: [
-                            TextSpan(
-                              text: "SIGN UP",
-                              style: TextStyle(
-                                color: Colors.blueAccent,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+  key: _formKey,
+  child: Column(
+    children: [
+      Container(
+        width: 350,
+        child: TextFormField(
+          controller: _emailController,
+          decoration: InputDecoration(
+            hintText: "EXAMPLE@EXAMPLE.COM",
+            filled: true,
+            fillColor: Colors.grey[200],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          validator: (value) =>
+              value!.isEmpty ? 'Please enter your email' : null,
+        ),
+      ),
+      SizedBox(height: 15),
+      Container(
+        width: 350,
+        child: TextFormField(
+          controller: _passwordController,
+          obscureText: true,
+          decoration: InputDecoration(
+            hintText: "PASSWORD",
+            filled: true,
+            fillColor: Colors.grey[200],
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          validator: (value) =>
+              value!.isEmpty ? 'Please enter your password' : null,
+        ),
+      ),
+      SizedBox(height: 20),
+      if (_errorMessage != null)
+        Text(
+          _errorMessage!,
+          style: TextStyle(color: Colors.red),
+        ),
+      SizedBox(height: 20),
+      Container(
+        width: 350,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blueAccent,
+            padding: EdgeInsets.symmetric(vertical: 15),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          onPressed: _isLoading ? null : _login,
+          child: _isLoading
+              ? CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                )
+              : Text(
+                  "SIGN IN",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+        ),
+      ),
+      SizedBox(height: 10),
+      TextButton(
+        onPressed: () {},
+        child: Text(
+          "Forgot Password?",
+          style: TextStyle(color: Colors.blueAccent),
+        ),
+      ),
+      SizedBox(height: 20),
+      TextButton(
+        onPressed: () {
+          Navigator.pushNamed(context, '/register');
+        },
+        child: RichText(
+          text: TextSpan(
+            text: "Don’t have an account? ",
+            style: TextStyle(color: Colors.black),
+            children: [
+              TextSpan(
+                text: "SIGN UP",
+                style: TextStyle(
+                  color: Colors.blueAccent,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  ),
+)
+
             ],
           ),
         ),

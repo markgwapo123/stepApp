@@ -31,10 +31,12 @@ class MyApp extends StatelessWidget {
   routes: {
     "/auth": (context) => AuthScreen(),
     "/login": (context) => LoginScreen(),
+    
     "/register": (context) => RegisterScreen(),
     "/events": (context) => EventsScreen(apiService: apiService, token: token ?? ""),
     "/create_event": (context) => CreateEventScreen(apiService: apiService, token: token ?? ""),
-    "/admin_dashboard": (context) => AdminDashboardScreen(apiService: apiService, token: token ?? ""), // ✅ ADDED
+    "/admin_dashboard": (context) => AdminDashboardScreen(apiService: apiService, token: token ?? ""),
+
   },
 );
 
